@@ -11,21 +11,16 @@ RUN npm ci --only=production
 # Copy application code
 COPY src/ ./
 
-# Create non-root user
-RUN addgroup -g 1000 app && \
-    adduser -D -u 1000 -G app app && \
-    chown -R app:app /app
-
 # Final stage
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy from builder
-COPY --from=builder --chown=app:app /app /app
+# Copy from builder (use node user which already exists)
+COPY --from=builder --chown=node:node /app /app
 
 # Use non-root user
-USER app
+USER node
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
