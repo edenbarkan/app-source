@@ -1,0 +1,41 @@
+name: Promote to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to promote from dev'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout helm-charts repo
+        uses: actions/checkout@v4
+        with:
+          repository: edenbarkan/helm-charts
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Update staging image tag
+        run: |
+          yq e '.image.tag = "${{ inputs.image_tag }}"' \
+            -i apps/myapp/overlays/staging/values.yaml
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "ci(staging): promote to ${{ inputs.image_tag }}"
+          git push
+
+      - name: Notify
+        run: |
+          echo "✅ Staging promoted to: ${{ inputs.image_tag }}"
+          echo "✅ ArgoCD will auto-sync staging namespace"

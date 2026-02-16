@@ -1,0 +1,97 @@
+name: CI - Build & Deploy to Dev
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  id-token: write  # OIDC for AWS
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: myapp
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ steps.meta.outputs.version }}"
+          format: "table"
+          exit-code: "1"
+          severity: "HIGH,CRITICAL"
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout helm-charts repo
+        uses: actions/checkout@v4
+        with:
+          repository: edenbarkan/helm-charts
+          token: ${{ secrets.GH_PAT }}
+          path: helm-charts
+
+      - name: Update dev image tag
+        run: |
+          cd helm-charts
+          yq e '.image.tag = "${{ needs.build.outputs.image_tag }}"' \
+            -i apps/myapp/overlays/dev/values.yaml
+
+      - name: Commit and push
+        run: |
+          cd helm-charts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "ci(dev): update myapp to ${{ needs.build.outputs.image_tag }}" || exit 0
+          git push
+
+      - name: Notify
+        run: |
+          echo "✅ Image pushed to ECR: ${{ needs.build.outputs.image_tag }}"
+          echo "✅ ArgoCD will auto-sync dev namespace"

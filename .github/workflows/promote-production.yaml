@@ -1,0 +1,42 @@
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to promote from staging (use semantic version)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout helm-charts repo
+        uses: actions/checkout@v4
+        with:
+          repository: edenbarkan/helm-charts
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Update production image tag
+        run: |
+          yq e '.image.tag = "${{ inputs.image_tag }}"' \
+            -i apps/myapp/overlays/production/values.yaml
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "ci(prod): promote to ${{ inputs.image_tag }}"
+          git push
+
+      - name: Notify
+        run: |
+          echo "✅ Production tag updated to: ${{ inputs.image_tag }}"
+          echo "⚠️  ArgoCD will show OutOfSync"
+          echo "👤 Manual sync required in ArgoCD UI"
