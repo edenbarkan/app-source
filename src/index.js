@@ -15,7 +15,7 @@ app.get('/ready', (req, res) => {
 // Main endpoint
 app.get('/', (req, res) => {
   res.json({
-    message: 'Hello from EKS!',
+    message: 'Hello from MyApp on EKS!',
     version: process.env.VERSION || '1.0.0',
     environment: process.env.ENVIRONMENT || 'unknown'
   });
