@@ -4,7 +4,7 @@ This repository contains the application code and CI/CD pipelines.
 
 ## 🏗️ Application Stack
 
-- **Runtime**: Node.js 18 (Alpine)
+- **Runtime**: Node.js 22 (Alpine)
 - **Framework**: Express.js
 - **Container**: Docker multi-stage build
 - **CI/CD**: GitHub Actions
@@ -17,13 +17,15 @@ This repository contains the application code and CI/CD pipelines.
 app-source/
 ├── src/
 │   ├── index.js           # Express application
-│   └── package.json       # Dependencies
+│   ├── package.json       # Dependencies
+│   └── .eslintrc.json     # ESLint configuration
 ├── Dockerfile             # Multi-stage build
 ├── .dockerignore         # Docker ignore rules
+├── .trivyignore          # Suppress base image CVEs
 └── .github/
     └── workflows/
-        ├── ci.yaml                    # Build, test, push to ECR
-        ├── promote-staging.yaml       # Promote to staging
+        ├── ci.yaml                    # Build, lint, test, scan, deploy
+        ├── promote-staging.yaml       # Manual fallback for staging
         └── promote-production.yaml    # Promote to production
 ```
 
@@ -56,18 +58,23 @@ curl http://localhost:8080
 
 1. **Push to `develop` branch**
 2. GitHub Actions:
+   - Lints code (ESLint)
+   - Runs tests
    - Builds Docker image
-   - Runs Trivy security scan
-   - Pushes to ECR with `sha-xxxxx` tag
+   - Scans with Trivy (blocks build on HIGH/CRITICAL CVEs)
+   - Pushes to ECR with short SHA tag
    - Updates `helm-charts` repo (dev overlay)
 3. ArgoCD auto-syncs to dev namespace
 
-### Manual Promotion (Staging)
+### Automatic Flow (Staging)
 
-1. Go to GitHub Actions → "Promote to Staging"
-2. Click "Run workflow"
-3. Enter the image tag from dev (e.g., `sha-abc1234`)
-4. ArgoCD auto-syncs to staging namespace
+1. **Merge PR from `develop` → `main`**
+2. GitHub Actions:
+   - Same build + scan pipeline as dev
+   - Updates `helm-charts` repo (staging overlay)
+3. ArgoCD auto-syncs to staging namespace
+
+> A manual fallback workflow (`promote-staging.yaml`) exists for hotfixes.
 
 ### Manual Promotion (Production)
 
@@ -94,43 +101,11 @@ Configure these in your GitHub repository settings:
 
 ## 🔑 AWS OIDC Setup
 
-For GitHub Actions to push to ECR without AWS credentials:
+The `GitHubActionsECRAccess` IAM role is managed by Terraform in the `infra-live/modules/ecr` module. It uses:
+- OIDC trust policy (keyless authentication from GitHub Actions)
+- Scoped inline policy (least-privilege ECR push permissions to the `myapp` repository only)
 
-```bash
-# Create trust policy
-cat > github-trust-policy.json <<'EOF'
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:edenbarkan/*:*"
-        }
-      }
-    }
-  ]
-}
-EOF
-
-# Create IAM role
-aws iam create-role \
-  --role-name github-actions-role \
-  --assume-role-policy-document file://github-trust-policy.json
-
-# Attach ECR permissions
-aws iam attach-role-policy \
-  --role-name github-actions-role \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
-```
+The role is created automatically when you deploy the ECR module with `github_actions_role_enabled = true`.
 
 ## 🧪 Local Development
 
@@ -152,9 +127,9 @@ curl http://localhost:8080/ready
 
 | Environment | Tag Format | Example | Updated By |
 |-------------|------------|---------|------------|
-| **Dev** | `sha-{commit}` | `sha-a1b2c3d` | CI (automatic) |
-| **Staging** | `sha-{commit}` | `sha-a1b2c3d` | Manual promotion |
-| **Production** | `v{semver}` | `v1.0.0` | Manual promotion |
+| **Dev** | `{short-sha}` | `a1b2c3d` | CI on `develop` push |
+| **Staging** | `{short-sha}` | `e4f5g6h` | CI on `main` merge |
+| **Production** | `{short-sha}` | `v1.0.0` | Manual promotion |
 
 ## 🔒 Security Features
 
@@ -165,9 +140,10 @@ curl http://localhost:8080/ready
 - Multi-stage build (no build tools in final image)
 
 **CI/CD Security:**
-- Trivy vulnerability scanning
+- Trivy vulnerability scanning (blocks build on HIGH/CRITICAL CVEs)
+- ESLint static analysis
 - OIDC authentication (no long-lived credentials)
-- Image signing (optional, can add Cosign)
+- Scoped IAM permissions (Terraform-managed, least privilege)
 
 ## 🎯 Testing the Full Pipeline
 
@@ -191,12 +167,12 @@ This will:
 - ✅ Update helm-charts dev overlay
 - ✅ ArgoCD auto-deploys to dev namespace
 
-### 2. Promote to Staging
+### 2. Deploy to Staging
 
-1. Check the image tag from the CI run
-2. Go to Actions → "Promote to Staging"
-3. Enter the image tag
-4. Watch ArgoCD auto-sync
+1. Create a PR from `develop` → `main`
+2. Merge the PR
+3. CI automatically builds, scans, and updates staging overlay
+4. ArgoCD auto-syncs to staging namespace
 
 ### 3. Promote to Production
 
