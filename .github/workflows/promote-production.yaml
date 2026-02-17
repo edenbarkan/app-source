@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: promote-production
+  cancel-in-progress: false
+
 jobs:
   promote:
     runs-on: ubuntu-latest
