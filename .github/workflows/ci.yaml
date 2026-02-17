@@ -24,6 +24,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: src
+
+      - name: Run tests
+        run: npm test
+        working-directory: src
+
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -54,11 +69,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner (image)
         if: github.event_name != 'pull_request'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ steps.meta.outputs.version }}"
+          format: "table"
+          exit-code: "1"
+          severity: "HIGH,CRITICAL"
+
+      - name: Run Trivy vulnerability scanner (filesystem)
+        if: github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
           format: "table"
           exit-code: "1"
           severity: "HIGH,CRITICAL"
