@@ -97,6 +97,7 @@ jobs:
           format: "table"
           exit-code: "1"
           severity: "HIGH,CRITICAL"
+          trivyignores: ".trivyignore"
 
       - name: Push Docker image to ECR
         if: github.event_name != 'pull_request'

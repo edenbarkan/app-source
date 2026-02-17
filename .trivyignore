@@ -1,0 +1,11 @@
+# Base image npm bundled packages - not used by application at runtime
+# These are in /usr/local/lib/node_modules/npm/ (Node.js built-in npm)
+# Re-evaluate when upgrading Node.js base image
+
+# glob: Command Injection via malicious filenames (npm internal, not app-exposed)
+CVE-2025-64756
+
+# tar: Arbitrary file overwrite/symlink poisoning (npm internal, not app-exposed)
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
