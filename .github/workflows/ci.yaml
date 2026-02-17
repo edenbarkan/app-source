@@ -2,7 +2,7 @@ name: CI - Build & Deploy to Dev
 
 on:
   push:
-    branches: [main, develop]
+    branches: [develop]
   pull_request:
     branches: [main, develop]
 
@@ -13,6 +13,10 @@ permissions:
 env:
   AWS_REGION: us-east-1
   ECR_REPO: myapp
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -39,21 +43,28 @@ jobs:
         run: npm ci
         working-directory: src
 
+      - name: Run linter
+        run: npm run lint
+        working-directory: src
+
       - name: Run tests
         run: npm test
         working-directory: src
 
       - name: Configure AWS Credentials (OIDC)
+        if: github.event_name != 'pull_request'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsECRAccess
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
+        if: github.event_name != 'pull_request'
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Docker metadata
+        if: github.event_name != 'pull_request'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -63,29 +74,43 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
-      - name: Build and push Docker image
+      - name: Set up Docker Buildx
+        if: github.event_name != 'pull_request'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run Trivy vulnerability scanner (image)
+      - name: Scan image for vulnerabilities
         if: github.event_name != 'pull_request'
-        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ steps.meta.outputs.version }}"
+          image-ref: "${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ steps.short_sha.outputs.value }}"
           format: "table"
           exit-code: "1"
           severity: "HIGH,CRITICAL"
 
-      - name: Run Trivy vulnerability scanner (filesystem)
+      - name: Push Docker image to ECR
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan filesystem for vulnerabilities
         if: github.event_name == 'pull_request'
-        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
