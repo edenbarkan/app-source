@@ -24,8 +24,8 @@ jobs:
 
       - name: Update production image tag
         run: |
-          yq e '.image.tag = "${{ inputs.image_tag }}"' \
-            -i apps/myapp/overlays/production/values.yaml
+          sed -i 's|tag: ".*"|tag: "${{ inputs.image_tag }}"|' \
+            apps/myapp/overlays/production/values.yaml
 
       - name: Commit and push
         run: |
