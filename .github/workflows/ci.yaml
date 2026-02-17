@@ -1,8 +1,8 @@
-name: CI - Build & Deploy to Dev
+name: CI - Build & Deploy
 
 on:
   push:
-    branches: [develop]
+    branches: [main, develop]
   pull_request:
     branches: [main, develop]
 
@@ -146,9 +146,47 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "ci(dev): update myapp to ${{ needs.build.outputs.image_tag }}" || exit 0
+          git pull --rebase
           git push
 
       - name: Notify
         run: |
           echo "✅ Image pushed to ECR: ${{ needs.build.outputs.image_tag }}"
           echo "✅ ArgoCD will auto-sync dev namespace"
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout helm-charts repo
+        uses: actions/checkout@v4
+        with:
+          repository: edenbarkan/helm-charts
+          token: ${{ secrets.GH_PAT }}
+          path: helm-charts
+
+      - name: Update staging image tag
+        run: |
+          cd helm-charts
+          sed -i 's|tag: ".*"|tag: "${{ needs.build.outputs.image_tag }}"|' \
+            apps/myapp/overlays/staging/values.yaml
+
+      - name: Commit and push
+        run: |
+          cd helm-charts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "ci(staging): update myapp to ${{ needs.build.outputs.image_tag }}" || exit 0
+          git pull --rebase
+          git push
+
+      - name: Notify
+        run: |
+          echo "✅ Image pushed to ECR: ${{ needs.build.outputs.image_tag }}"
+          echo "✅ ArgoCD will auto-sync staging namespace"
