@@ -96,9 +96,25 @@ app.get('/api/data', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Database: ${DATABASE_URL ? 'configured' : 'NOT SET'}`);
-  console.log(`API Key: ${API_SECRET_KEY ? 'configured' : 'NOT SET'}`);
-  console.log(`Landing page: ${landingHtml ? 'loaded' : 'not found'}`);
+// 404 handler for unmatched routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
 });
+
+// Start server when run directly (not when imported for testing)
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Database: ${DATABASE_URL ? 'configured' : 'NOT SET'}`);
+    console.log(`API Key: ${API_SECRET_KEY ? 'configured' : 'NOT SET'}`);
+    console.log(`Landing page: ${landingHtml ? 'loaded' : 'not found'}`);
+  });
+
+  // Graceful shutdown for Kubernetes SIGTERM
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down...');
+    server.close(() => process.exit(0));
+  });
+}
+
+module.exports = app;

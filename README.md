@@ -17,8 +17,11 @@ This repository contains the application code and CI/CD pipelines.
 app-source/
 ├── src/
 │   ├── index.js           # Express application
+│   ├── landing.html       # Browser landing page (served via content negotiation)
 │   ├── package.json       # Dependencies
-│   └── .eslintrc.json     # ESLint configuration
+│   ├── .eslintrc.json     # ESLint configuration
+│   └── tests/
+│       └── index.test.js  # Endpoint tests (Node.js built-in test runner)
 ├── Dockerfile             # Multi-stage build
 ├── .dockerignore         # Docker ignore rules
 ├── .trivyignore          # Suppress base image CVEs
@@ -33,9 +36,10 @@ app-source/
 
 | Endpoint | Purpose | Response |
 |----------|---------|----------|
-| `GET /` | App info + secret status | `{"secrets":{"database":"connected","apiKey":"configured"}}` |
+| `GET /` | App info (HTML for browsers, JSON for APIs) | Content negotiation via `Accept` header |
 | `GET /health` | Liveness probe | `{"status": "healthy"}` |
 | `GET /ready` | Readiness probe | `{"status": "ready"}` |
+| `GET /api/status` | Live status (hostname, uptime, secrets) | `{"hostname":"...","uptime":"...","timestamp":"..."}` |
 | `GET /api/data` | Protected endpoint | 401 without key, 200 with correct `X-API-Key` header |
 
 ## 🐳 Docker Build
@@ -115,13 +119,16 @@ The role is created automatically when you deploy the ECR module with `github_ac
 cd src
 npm install
 
+# Run tests
+npm test
+
 # Run locally
 npm start
 
 # Test endpoints
 curl http://localhost:8080/
 curl http://localhost:8080/health
-curl http://localhost:8080/ready
+curl http://localhost:8080/api/status
 ```
 
 ## 📊 Image Tagging Strategy
