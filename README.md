@@ -33,9 +33,10 @@ app-source/
 
 | Endpoint | Purpose | Response |
 |----------|---------|----------|
-| `GET /` | Main endpoint | JSON with version and environment |
+| `GET /` | App info + secret status | `{"secrets":{"database":"connected","apiKey":"configured"}}` |
 | `GET /health` | Liveness probe | `{"status": "healthy"}` |
 | `GET /ready` | Readiness probe | `{"status": "ready"}` |
+| `GET /api/data` | Protected endpoint | 401 without key, 200 with correct `X-API-Key` header |
 
 ## 🐳 Docker Build
 
