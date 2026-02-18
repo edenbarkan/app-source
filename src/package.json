@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "description": "Example application",
   "main": "index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "start": "node index.js",
     "lint": "eslint .",
-    "test": "echo \"Tests passed\""
+    "test": "node --test 'tests/*.test.js'"
   },
   "dependencies": {
     "express": "^4.18.2"
