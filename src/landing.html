@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyApp on EKS — Production-Grade Kubernetes Platform</title>
+    <style>
+        :root {
+            --color-primary: #667eea;
+            --color-secondary: #764ba2;
+            --color-success: #48bb78;
+            --color-warning: #ed8936;
+            --color-danger: #f56565;
+            --color-aws: #ff9900;
+            --color-text: #2d3748;
+            --color-muted: #718096;
+            --color-light: #e2e8f0;
+            --color-bg: #f7fafc;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --radius: 12px;
+            --radius-lg: 20px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-lg: 0 20px 60px rgba(0,0,0,0.3);
+            --transition: all 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-family);
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--color-text);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 40px;
+        }
+
+        /* Hero */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--color-muted);
+            font-size: 1.2em;
+            margin-bottom: 16px;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-env {
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+        }
+
+        .badge-version {
+            background: var(--color-bg);
+            color: var(--color-text);
+            border: 1px solid var(--color-light);
+        }
+
+        .badge-live {
+            background: rgba(72, 187, 120, 0.1);
+            color: var(--color-success);
+            border: 1px solid var(--color-success);
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            color: var(--color-text);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--color-light);
+        }
+
+        h2 span {
+            margin-right: 8px;
+        }
+
+        /* Status Cards */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 16px;
+        }
+
+        .status-card {
+            background: var(--color-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            transition: var(--transition);
+            border: 1px solid var(--color-light);
+        }
+
+        .status-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+        }
+
+        .status-card .label {
+            font-size: 0.8em;
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .status-card .value {
+            font-size: 1.2em;
+            font-weight: 700;
+            word-break: break-all;
+        }
+
+        .status-ok { color: var(--color-success); }
+        .status-err { color: var(--color-danger); }
+        .status-info { color: var(--color-primary); }
+
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--color-success);
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.4); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(72, 187, 120, 0); }
+        }
+
+        .refresh-info {
+            text-align: right;
+            font-size: 0.75em;
+            color: var(--color-muted);
+            margin-top: 8px;
+        }
+
+        /* Component Grid */
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .component-card {
+            background: var(--color-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            border-left: 4px solid var(--color-primary);
+            transition: var(--transition);
+        }
+
+        .component-card:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
+        .component-card .icon {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+        }
+
+        .component-card h3 {
+            font-size: 1em;
+            margin-bottom: 4px;
+            color: var(--color-text);
+        }
+
+        .component-card p {
+            font-size: 0.85em;
+            color: var(--color-muted);
+            line-height: 1.4;
+        }
+
+        .component-card.aws { border-left-color: var(--color-aws); }
+        .component-card.security { border-left-color: var(--color-success); }
+        .component-card.networking { border-left-color: #4299e1; }
+
+        /* Shared Resources */
+        .shared-resources {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(255, 153, 0, 0.05);
+            border: 1px dashed var(--color-aws);
+            border-radius: var(--radius);
+        }
+
+        .shared-resource {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: white;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 500;
+            border: 1px solid var(--color-light);
+        }
+
+        /* Pipeline */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin-bottom: 24px;
+        }
+
+        .pipeline-stage {
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+            padding: 16px 12px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: var(--transition);
+        }
+
+        .pipeline-stage:hover {
+            transform: scale(1.05);
+        }
+
+        .pipeline-arrow {
+            font-size: 1.2em;
+            color: var(--color-muted);
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .deploy-tracks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .deploy-track {
+            padding: 16px 20px;
+            border-radius: var(--radius);
+            border-left: 5px solid;
+            background: var(--color-bg);
+        }
+
+        .deploy-track.dev { border-left-color: var(--color-success); }
+        .deploy-track.staging { border-left-color: var(--color-warning); }
+        .deploy-track.prod { border-left-color: var(--color-danger); }
+
+        .deploy-track h3 {
+            font-size: 0.95em;
+            margin-bottom: 6px;
+        }
+
+        .deploy-track p {
+            font-size: 0.82em;
+            color: var(--color-muted);
+            line-height: 1.5;
+        }
+
+        /* Security Grid */
+        .security-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .security-card {
+            background: var(--color-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: var(--transition);
+            border: 1px solid var(--color-light);
+        }
+
+        .security-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+            border-color: var(--color-success);
+        }
+
+        .security-card h3 {
+            font-size: 0.95em;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .security-card p {
+            font-size: 0.82em;
+            color: var(--color-muted);
+            line-height: 1.4;
+        }
+
+        .security-card code {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--color-primary);
+        }
+
+        /* API Demo */
+        .endpoint-list {
+            margin-bottom: 20px;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--color-light);
+        }
+
+        .endpoint:last-child { border-bottom: none; }
+
+        .method {
+            display: inline-block;
+            padding: 2px 10px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 700;
+            font-family: monospace;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .endpoint-path {
+            font-family: monospace;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .endpoint-desc {
+            color: var(--color-muted);
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: var(--radius);
+            overflow-x: auto;
+            font-size: 0.85em;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        pre code {
+            color: inherit;
+            background: none;
+            padding: 0;
+        }
+
+        .comment { color: #718096; }
+        .string { color: #68d391; }
+        .cmd { color: #90cdf4; }
+
+        .try-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .try-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .try-btn:active {
+            transform: translateY(0);
+        }
+
+        #api-result {
+            margin-top: 16px;
+            display: none;
+        }
+
+        #api-result.visible {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tech Stack */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .tech-card {
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .tech-card:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .tech-card .tech-icon {
+            font-size: 1.5em;
+            margin-bottom: 6px;
+        }
+
+        .tech-card .tech-name {
+            font-weight: 700;
+            font-size: 0.85em;
+        }
+
+        .tech-card .tech-detail {
+            font-size: 0.7em;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 2px solid var(--color-light);
+            color: var(--color-muted);
+            font-size: 0.85em;
+        }
+
+        footer a {
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+
+        footer a:hover { text-decoration: underline; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+            h1 { font-size: 1.8em; }
+            .pipeline { flex-direction: column; }
+            .pipeline-arrow { transform: rotate(90deg); }
+            .status-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Hero -->
+        <header>
+            <h1>MyApp on EKS</h1>
+            <p class="subtitle">Production-Grade Kubernetes Infrastructure Portfolio</p>
+            <div class="badges">
+                <span class="badge badge-env" id="hero-env"><!--SERVER:ENVIRONMENT--></span>
+                <span class="badge badge-version"><!--SERVER:VERSION--></span>
+                <span class="badge badge-live"><span class="pulse" aria-hidden="true"></span> Live on EKS</span>
+            </div>
+        </header>
+
+        <main>
+
+            <!-- Live Status -->
+            <section aria-label="Live application status">
+                <h2><span aria-hidden="true">&#9889;</span> Live Status</h2>
+                <div class="status-grid" aria-live="polite">
+                    <div class="status-card">
+                        <div class="label">Environment</div>
+                        <div class="value status-info" id="status-env">loading...</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="label">Version</div>
+                        <div class="value" id="status-version">loading...</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="label">Database Secret</div>
+                        <div class="value" id="status-db">loading...</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="label">API Key Secret</div>
+                        <div class="value" id="status-apikey">loading...</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="label">Pod Hostname</div>
+                        <div class="value status-info" id="status-hostname" style="font-size:0.8em">loading...</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="label">Uptime</div>
+                        <div class="value status-info" id="status-uptime">loading...</div>
+                    </div>
+                </div>
+                <div class="refresh-info">Auto-refreshes every 30s &middot; Last: <span id="last-refresh">--</span></div>
+            </section>
+
+            <!-- Architecture -->
+            <section aria-label="Architecture overview">
+                <h2><span aria-hidden="true">&#9881;</span> Architecture</h2>
+                <div class="component-grid">
+                    <div class="component-card aws">
+                        <div class="icon">&#9752;&#65039;</div>
+                        <h3>Amazon EKS 1.32</h3>
+                        <p>Managed Kubernetes control plane with 2 clusters (dev + prod)</p>
+                    </div>
+                    <div class="component-card">
+                        <div class="icon">&#128640;</div>
+                        <h3>Karpenter</h3>
+                        <p>Just-in-time node provisioning. Spot for dev, On-Demand for prod</p>
+                    </div>
+                    <div class="component-card security">
+                        <div class="icon">&#128259;</div>
+                        <h3>ArgoCD</h3>
+                        <p>GitOps continuous delivery. Auto-sync dev/staging, manual prod</p>
+                    </div>
+                    <div class="component-card security">
+                        <div class="icon">&#128273;</div>
+                        <h3>External Secrets</h3>
+                        <p>Syncs secrets from AWS Secrets Manager. Never stored in Git</p>
+                    </div>
+                    <div class="component-card networking">
+                        <div class="icon">&#9878;&#65039;</div>
+                        <h3>AWS Load Balancer Controller</h3>
+                        <p>Provisions ALBs for ingress. Internet-facing with SSL termination</p>
+                    </div>
+                    <div class="component-card networking">
+                        <div class="icon">&#127760;</div>
+                        <h3>Ingress NGINX</h3>
+                        <p>In-cluster reverse proxy. Host-based routing to services</p>
+                    </div>
+                </div>
+                <div class="shared-resources">
+                    <strong style="width:100%;font-size:0.85em;color:var(--color-aws)">&#9729;&#65039; AWS Shared Resources</strong>
+                    <span class="shared-resource">&#128230; ECR</span>
+                    <span class="shared-resource">&#128194; S3 (Terraform State)</span>
+                    <span class="shared-resource">&#128274; DynamoDB (State Lock)</span>
+                    <span class="shared-resource">&#128272; Secrets Manager</span>
+                </div>
+            </section>
+
+            <!-- GitOps Pipeline -->
+            <section aria-label="GitOps deployment pipeline">
+                <h2><span aria-hidden="true">&#128260;</span> GitOps Pipeline</h2>
+                <div class="pipeline" role="img" aria-label="Deployment flow: Developer to CI Pipeline to ECR to ArgoCD to Live on EKS">
+                    <div class="pipeline-stage">&#128104;&#8205;&#128187; Developer</div>
+                    <span class="pipeline-arrow" aria-hidden="true">&#10132;</span>
+                    <div class="pipeline-stage">&#9881;&#65039; CI Pipeline</div>
+                    <span class="pipeline-arrow" aria-hidden="true">&#10132;</span>
+                    <div class="pipeline-stage">&#128230; ECR</div>
+                    <span class="pipeline-arrow" aria-hidden="true">&#10132;</span>
+                    <div class="pipeline-stage">&#128259; ArgoCD</div>
+                    <span class="pipeline-arrow" aria-hidden="true">&#10132;</span>
+                    <div class="pipeline-stage">&#9752;&#65039; Live on EKS</div>
+                </div>
+                <div class="deploy-tracks">
+                    <div class="deploy-track dev">
+                        <h3>&#128994; Dev</h3>
+                        <p>Push to <code>develop</code> &#8594; CI builds &amp; scans &#8594; Auto-deploy via ArgoCD. Spot instances, 1 replica.</p>
+                    </div>
+                    <div class="deploy-track staging">
+                        <h3>&#128992; Staging</h3>
+                        <p>Merge to <code>main</code> &#8594; CI builds &amp; scans &#8594; Auto-deploy via ArgoCD. Spot instances, 2 replicas.</p>
+                    </div>
+                    <div class="deploy-track prod">
+                        <h3>&#128308; Production</h3>
+                        <p>Manual <code>workflow_dispatch</code> &#8594; CI builds &#8594; ArgoCD manual sync required. On-Demand, 3-15 replicas (HPA).</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Security -->
+            <section aria-label="Security features">
+                <h2><span aria-hidden="true">&#128274;</span> Security</h2>
+                <div class="security-grid">
+                    <div class="security-card">
+                        <h3>&#128273; EKS Pod Identity</h3>
+                        <p>Modern keyless IAM auth for Karpenter, AWS LBC, and External Secrets. No long-lived credentials.</p>
+                    </div>
+                    <div class="security-card">
+                        <h3>&#128100; Non-root Container</h3>
+                        <p><code>runAsUser: 1000</code> and <code>runAsNonRoot: true</code>. Processes never run as root.</p>
+                    </div>
+                    <div class="security-card">
+                        <h3>&#128451; Read-only Filesystem</h3>
+                        <p><code>readOnlyRootFilesystem: true</code>. Only <code>/tmp</code> is writable. Prevents runtime tampering.</p>
+                    </div>
+                    <div class="security-card">
+                        <h3>&#128683; Drop ALL Capabilities</h3>
+                        <p><code>drop: [ALL]</code>. Linux capabilities stripped, <code>allowPrivilegeEscalation: false</code>.</p>
+                    </div>
+                    <div class="security-card">
+                        <h3>&#128270; Trivy Scanning</h3>
+                        <p>Image + filesystem CVE scanning in CI. HIGH/CRITICAL findings block deployment.</p>
+                    </div>
+                    <div class="security-card">
+                        <h3>&#128272; External Secrets</h3>
+                        <p>Secrets synced from AWS Secrets Manager via ESO. IAM-scoped per cluster: dev reads <code>dev/*</code>, prod reads <code>production/*</code>.</p>
+                    </div>
+                    <div class="security-card">
+                        <h3>&#128423; Private Subnets</h3>
+                        <p>All nodes in private subnets with NAT Gateway egress. No direct internet access to pods.</p>
+                    </div>
+                    <div class="security-card">
+                        <h3>&#128279; OIDC Federation</h3>
+                        <p>GitHub Actions uses OIDC to assume IAM roles. Zero static AWS credentials in CI.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- API Demo -->
+            <section aria-label="API endpoints and demo">
+                <h2><span aria-hidden="true">&#128268;</span> API Endpoints</h2>
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/</span>
+                        <span class="endpoint-desc">Landing page (browser) or JSON (Accept: application/json)</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/api/status</span>
+                        <span class="endpoint-desc">Live status — environment, secrets, hostname, uptime</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/api/data</span>
+                        <span class="endpoint-desc">Protected endpoint — requires <code>X-API-Key</code> header from Secrets Manager</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/health</span>
+                        <span class="endpoint-desc">Liveness probe for Kubernetes</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/ready</span>
+                        <span class="endpoint-desc">Readiness probe for Kubernetes</span>
+                    </div>
+                </div>
+                <pre><code><span class="comment"># Get live status</span>
+<span class="cmd">curl</span> <span class="string">https://myapp.dev.example.com/api/status</span> | jq
+
+<span class="comment"># Protected endpoint — 401 without key</span>
+<span class="cmd">curl</span> <span class="string">https://myapp.dev.example.com/api/data</span>
+
+<span class="comment"># Authenticate with API key from AWS Secrets Manager</span>
+<span class="cmd">curl</span> -H <span class="string">"X-API-Key: $SECRET"</span> <span class="string">https://myapp.dev.example.com/api/data</span></code></pre>
+                <button class="try-btn" id="try-btn" aria-label="Fetch live status from the API">&#9654; Try /api/status live</button>
+                <div id="api-result"><pre><code id="api-result-content"></code></pre></div>
+            </section>
+
+            <!-- Tech Stack -->
+            <section aria-label="Technology stack">
+                <h2><span aria-hidden="true">&#128736;</span> Technology Stack</h2>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <div class="tech-icon">&#9752;&#65039;</div>
+                        <div class="tech-name">Amazon EKS</div>
+                        <div class="tech-detail">v1.32</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#127959;</div>
+                        <div class="tech-name">Terraform</div>
+                        <div class="tech-detail">IaC</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128193;</div>
+                        <div class="tech-name">Terragrunt</div>
+                        <div class="tech-detail">DRY config</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128259;</div>
+                        <div class="tech-name">ArgoCD</div>
+                        <div class="tech-detail">GitOps</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128640;</div>
+                        <div class="tech-name">Karpenter</div>
+                        <div class="tech-detail">Autoscaling</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#127760;</div>
+                        <div class="tech-name">NGINX Ingress</div>
+                        <div class="tech-detail">Routing</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#9878;&#65039;</div>
+                        <div class="tech-name">AWS LBC</div>
+                        <div class="tech-detail">Load Balancer</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128273;</div>
+                        <div class="tech-name">External Secrets</div>
+                        <div class="tech-detail">Secret Sync</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128274;</div>
+                        <div class="tech-name">Pod Identity</div>
+                        <div class="tech-detail">IAM Auth</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128230;</div>
+                        <div class="tech-name">Amazon ECR</div>
+                        <div class="tech-detail">Registry</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#9881;&#65039;</div>
+                        <div class="tech-name">GitHub Actions</div>
+                        <div class="tech-detail">CI/CD</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128270;</div>
+                        <div class="tech-name">Trivy</div>
+                        <div class="tech-detail">Security Scan</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128154;</div>
+                        <div class="tech-name">Node.js 22</div>
+                        <div class="tech-detail">Runtime</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#128268;</div>
+                        <div class="tech-name">Express.js</div>
+                        <div class="tech-detail">Framework</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-icon">&#9879;&#65039;</div>
+                        <div class="tech-name">Helm</div>
+                        <div class="tech-detail">Packaging</div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <footer>
+            <p>Built with Express.js &middot; Deployed via ArgoCD GitOps &middot; Running on Amazon EKS</p>
+        </footer>
+
+    </div>
+
+    <script>
+        function updateStatus(data) {
+            var env = document.getElementById('status-env');
+            var version = document.getElementById('status-version');
+            var db = document.getElementById('status-db');
+            var apikey = document.getElementById('status-apikey');
+            var hostname = document.getElementById('status-hostname');
+            var uptime = document.getElementById('status-uptime');
+            var refresh = document.getElementById('last-refresh');
+
+            env.textContent = data.environment;
+            version.textContent = data.version;
+
+            db.textContent = data.secrets.database;
+            db.className = 'value ' + (data.secrets.database === 'connected' ? 'status-ok' : 'status-err');
+
+            apikey.textContent = data.secrets.apiKey;
+            apikey.className = 'value ' + (data.secrets.apiKey === 'configured' ? 'status-ok' : 'status-err');
+
+            hostname.textContent = data.hostname;
+            uptime.textContent = data.uptime;
+            refresh.textContent = new Date().toLocaleTimeString();
+        }
+
+        function refreshStatus() {
+            fetch('/api/status')
+                .then(function(res) { return res.json(); })
+                .then(updateStatus)
+                .catch(function() {
+                    document.getElementById('status-env').textContent = 'unavailable';
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshStatus();
+            setInterval(refreshStatus, 30000);
+
+            document.getElementById('try-btn').addEventListener('click', function() {
+                var resultEl = document.getElementById('api-result');
+                var contentEl = document.getElementById('api-result-content');
+                contentEl.textContent = 'Fetching...';
+                resultEl.className = 'visible';
+
+                fetch('/api/status')
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        contentEl.textContent = JSON.stringify(data, null, 2);
+                    })
+                    .catch(function(err) {
+                        contentEl.textContent = 'Error: ' + err.message;
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
