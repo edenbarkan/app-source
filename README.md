@@ -1,3 +1,5 @@
+> **Multi-Repo DevOps Project** | [project-overview](https://github.com/edenbarkan/project-overview) | [infra-live](https://github.com/edenbarkan/infra-live) | [helm-charts](https://github.com/edenbarkan/helm-charts) | **app-source** (you are here)
+
 # MyApp - Application Source
 
 This repository contains the application code and CI/CD pipelines.
@@ -10,6 +12,12 @@ This repository contains the application code and CI/CD pipelines.
 - **CI/CD**: GitHub Actions
 - **Registry**: Amazon ECR
 - **Deployment**: ArgoCD (GitOps)
+
+## 🎨 Interactive Diagram
+
+**[Open Interactive Diagram](docs/architecture-diagram.html)** - Visual overview of the CI/CD pipeline and deployment flow.
+
+---
 
 ## 📁 Repository Structure
 
@@ -191,8 +199,12 @@ This will:
 
 ## 🔗 Related Repositories
 
-- **infra-live**: Terraform/Terragrunt infrastructure
-- **helm-charts**: Helm charts and ArgoCD configurations
+| Repository | Purpose | Link |
+|------------|---------|------|
+| **app-source** (this repo) | Application code + CI/CD pipelines | You are here |
+| **infra-live** | Terraform/Terragrunt infrastructure | [edenbarkan/infra-live](https://github.com/edenbarkan/infra-live) |
+| **helm-charts** | Generic Helm chart + environment overlays | [edenbarkan/helm-charts](https://github.com/edenbarkan/helm-charts) |
+| **project-overview** | Architecture overview + entry point | [edenbarkan/project-overview](https://github.com/edenbarkan/project-overview) |
 
 ## 🎓 For Your Interview
 
